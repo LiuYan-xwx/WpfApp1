@@ -1,0 +1,12 @@
+MFStartup
+MFShutdown
+MFCreateSensorActivityMonitor
+
+IMFSensorActivityMonitor
+IMFSensorActivitiesReport
+IMFSensorActivityReport
+IMFSensorProcessActivity
+IMFShutdown
+
+HRESULT
+BOOL
