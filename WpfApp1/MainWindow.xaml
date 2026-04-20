@@ -3,21 +3,60 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid Margin="20">
-        <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="StatusText"
-                       FontSize="28"
-                       HorizontalAlignment="Center"
-                       Text="初始化中..." />
+        Title="Camera Usage Monitor"
+        Width="460"
+        Height="260">
 
-            <TextBlock x:Name="CameraText"
-                       Margin="0,12,0,0"
-                       FontSize="14"
-                       TextAlignment="Center"
-                       TextWrapping="Wrap" />
-        </StackPanel>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="12" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="12" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding Cameras}"
+                      SelectedItem="{Binding SelectedCamera, Mode=TwoWay}"
+                      DisplayMemberPath="Name"
+                      MinWidth="260"
+                      Height="32" />
+
+            <Button Grid.Column="2"
+                    Content="刷新"
+                    Height="32"
+                    Padding="16,0"
+                    Command="{Binding RefreshCommand}" />
+        </Grid>
+
+        <TextBlock Grid.Row="2"
+                   Text="{Binding StatusText}"
+                   FontSize="30"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center" />
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding CameraText}"
+                   FontSize="14"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center" />
+
+        <TextBlock Grid.Row="6"
+                   Text="{Binding IsLoading, StringFormat=加载中：{0}}"
+                   Opacity="0.7"
+                   HorizontalAlignment="Center" />
     </Grid>
 </Window>
