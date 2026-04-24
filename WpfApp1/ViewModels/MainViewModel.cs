@@ -3,16 +3,16 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WpfApp1.Models;
+using WpfApp1.Services;
 
 namespace WpfApp1.ViewModels;
 
 public partial class MainViewModel : ObservableObject, IDisposable
 {
-    private CameraUsageMonitor? _monitor;
+    private readonly ICameraDetectionService _cameraService;
     private bool _suppressSelectionChanged;
-    private string? _currentCameraId;
 
-    public ObservableCollection<CameraItem> Cameras { get; } = new();
+    public ObservableCollection<CameraDeviceInfo> Cameras { get; } = new();
 
     [ObservableProperty]
     private string statusText = "初始化中...";
@@ -23,8 +23,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isLoading;
 
-    private CameraItem? _selectedCamera;
-    public CameraItem? SelectedCamera
+    private CameraDeviceInfo? _selectedCamera;
+    public CameraDeviceInfo? SelectedCamera
     {
         get => _selectedCamera;
         set
@@ -41,6 +41,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    public MainViewModel() : this(new CameraDetectionService())
+    {
+    }
+
+    public MainViewModel(ICameraDetectionService cameraService)
+    {
+        _cameraService = cameraService;
+        _cameraService.UsageChanged += OnUsageChanged;
+    }
+
     public async Task InitializeAsync()
     {
         await RefreshAsync();
@@ -53,7 +63,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             IsLoading = true;
 
-            var devices = await CameraDeviceHelper.GetAllCamerasAsync();
+            var devices = await _cameraService.GetAllCamerasAsync();
             var previousId = SelectedCamera?.Id;
 
             _suppressSelectionChanged = true;
@@ -61,17 +71,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             foreach (var device in devices)
             {
-                Cameras.Add(new CameraItem
-                {
-                    Id = device.Id,
-                    Name = device.Name
-                });
+                Cameras.Add(device);
             }
 
             if (Cameras.Count == 0)
             {
                 SelectedCamera = null;
-                StopMonitor();
+                _cameraService.StopMonitoring();
                 StatusText = "没找到摄像头";
                 CameraText = "";
                 return;
@@ -81,7 +87,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StopMonitor();
+            _cameraService.StopMonitoring();
             StatusText = "加载失败";
             CameraText = ex.Message;
         }
@@ -97,30 +103,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task SwitchCameraAsync(CameraItem camera)
+    private async Task SwitchCameraAsync(CameraDeviceInfo camera)
     {
-        if (_currentCameraId == camera.Id && _monitor is not null)
+        if (_cameraService.CurrentCameraId == camera.Id && _cameraService.IsMonitoring)
         {
             CameraText = $"当前摄像头：{camera.Name}";
-            StatusText = _monitor.IsInUse ? "占用中" : "空闲";
+            StatusText = _cameraService.IsInUse ? "占用中" : "空闲";
             return;
         }
 
         try
         {
-            StopMonitor();
-
-            _monitor = new CameraUsageMonitor(camera.Id);
-            _monitor.UsageChanged += OnUsageChanged;
-            _monitor.Start();
-
-            _currentCameraId = camera.Id;
+            _cameraService.StartMonitoring(camera.Id);
             CameraText = $"当前摄像头：{camera.Name}";
-            StatusText = _monitor.IsInUse ? "占用中" : "空闲";
+            StatusText = _cameraService.IsInUse ? "占用中" : "空闲";
         }
         catch (Exception ex)
         {
-            StopMonitor();
+            _cameraService.StopMonitoring();
             StatusText = "启动失败";
             CameraText = ex.Message;
         }
@@ -145,20 +145,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void StopMonitor()
-    {
-        if (_monitor is not null)
-        {
-            _monitor.UsageChanged -= OnUsageChanged;
-            _monitor.Dispose();
-            _monitor = null;
-        }
-
-        _currentCameraId = null;
-    }
-
     public void Dispose()
     {
-        StopMonitor();
+        _cameraService.UsageChanged -= OnUsageChanged;
+        _cameraService.Dispose();
     }
 }
